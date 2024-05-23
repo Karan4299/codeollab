@@ -48,7 +48,7 @@ app.use((req, res, next) => {
     }, 60 * 60 * 1000);
     next();
 });
-app.post('api/create-room', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+app.post('/api/create-room', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
     const { username, password, roomId, secretKey } = req.body;
     try {
         const isInputValid = zodSchema_1.createRoomSchema.parse({
@@ -142,10 +142,17 @@ app.post('api/create-room', (req, res) => __awaiter(void 0, void 0, void 0, func
         }
     }
 }));
-app.post('api/join-room', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+app.post('/api/join-room', (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     const { roomId, username } = req.body;
     try {
         const isInputValid = zodSchema_1.joinRoomSchema.parse({ roomId, username });
+        if (((_a = rooms.get(roomId)) === null || _a === void 0 ? void 0 : _a.users.size) === 2) {
+            res.status(405).json({
+                message: 'Room limit exceeded',
+            });
+            return;
+        }
         if (!isInputValid) {
             res.status(400).json({
                 message: 'Please enter valid data',
@@ -261,7 +268,15 @@ io.on('connection', (socket) => {
         }
     }));
     socket.on('joinRoom', (_b) => __awaiter(void 0, [_b], void 0, function* ({ roomId, username }) {
+        var _c;
         try {
+            const roomSize = ((_c = io.sockets.adapter.rooms.get(roomId)) === null || _c === void 0 ? void 0 : _c.size) || 0;
+            if (roomSize === 2) {
+                socket.emit('error', {
+                    message: 'Room size limit exceeded',
+                });
+                return;
+            }
             if (!rooms.has(roomId)) {
                 const roomThere = yield prisma.rooms.findUnique({
                     where: {

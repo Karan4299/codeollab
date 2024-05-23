@@ -35,7 +35,7 @@ app.use((req, res, next) => {
   next()
 })
 
-app.post('api/create-room', async (req, res) => {
+app.post('/api/create-room', async (req, res) => {
   const { username, password, roomId, secretKey } = req.body
   try {
     const isInputValid = createRoomSchema.parse({
@@ -140,11 +140,18 @@ app.post('api/create-room', async (req, res) => {
   }
 })
 
-app.post('api/join-room', async (req, res) => {
+app.post('/api/join-room', async (req, res) => {
   const { roomId, username } = req.body
 
   try {
     const isInputValid = joinRoomSchema.parse({ roomId, username })
+
+    if (rooms.get(roomId)?.users.size === 2) {
+      res.status(405).json({
+        message: 'Room limit exceeded',
+      })
+      return
+    }
 
     if (!isInputValid) {
       res.status(400).json({
@@ -277,6 +284,15 @@ io.on('connection', (socket) => {
 
   socket.on('joinRoom', async ({ roomId, username }) => {
     try {
+
+      const roomSize = io.sockets.adapter.rooms.get(roomId)?.size || 0;
+
+      if (roomSize === 2) {
+        socket.emit('error', {
+          message: 'Room size limit exceeded',
+        })
+        return
+      }
       if (!rooms.has(roomId)) {
         const roomThere = await prisma.rooms.findUnique({
           where: {
