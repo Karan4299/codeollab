@@ -1,10 +1,22 @@
-import express from 'express'
+import express, { NextFunction, Request, Response } from 'express'
 import { Prisma, PrismaClient } from '@prisma/client'
 import bcrypt from 'bcrypt'
 import dotenv from 'dotenv'
-import { createRoomSchema, joinRoomSchema, userSchema } from './zodSchema'
+import { createRoomSchema, joinRoomSchema } from './zodSchema'
 import { Server as SocketIoServer } from 'socket.io'
 import cors from 'cors'
+import rateLimit from 'express-rate-limit';
+import CustomError from './cutomClass'
+import { ZodError } from 'zod'
+
+const RateLimiter = rateLimit({
+  windowMs:  10 * 1000, // 1 minutes
+  max: 6, // Limit each IP to 3 OTP requests per windowMs
+  message: 'Too many requests, please try again after 1 minutes',
+  standardHeaders: true, // Return rate limit info in the `RateLimit-*` headers
+  legacyHeaders: false, // Disable the `X-RateLimit-*` headers
+});
+
 const app = express()
 const httpServer = app.listen(8080)
 const io = new SocketIoServer(httpServer, {
@@ -35,7 +47,7 @@ app.use((req, res, next) => {
   next()
 })
 
-app.post('/api/create-room', async (req, res) => {
+app.post('/api/create-room',RateLimiter,  async (req, res, next) => {
   const { username, password, roomId, secretKey } = req.body
   try {
     const isInputValid = createRoomSchema.parse({
@@ -46,26 +58,17 @@ app.post('/api/create-room', async (req, res) => {
     })
 
     if (!isInputValid) {
-      res.status(400).json({
-        message: 'Wrong input data',
-      })
-      return
+      throw new CustomError(['Invalid data'], 400)
     }
 
     const envSecretKey = process.env.ADMIN_SECRET_KEY
     if (!envSecretKey) {
-      res.status(404).json({
-        message: 'Env ky not found',
-      })
-      return
+      throw new CustomError(['Env ky not found'], 404)
     }
 
     const isValidKey = await bcrypt.compare(secretKey, envSecretKey)
     if (!isValidKey) {
-      res.status(403).json({
-        message: 'Secret key is not valid',
-      })
-      return
+      throw new CustomError(['Secret key is not valid'], 403)
     }
 
     const admin = await prisma.admins.findUniqueOrThrow({
@@ -75,19 +78,13 @@ app.post('/api/create-room', async (req, res) => {
     })
 
     if (!admin) {
-      res.status(404).json({
-        message: 'Admin not found',
-      })
-      return
+      throw new CustomError(['Admin not found'], 404)
     }
 
     const isPasswordValid = await bcrypt.compare(password, admin.password)
 
     if (!isPasswordValid) {
-      res.status(400).json({
-        message: 'Wrong password',
-      })
-      return
+      throw new CustomError(['Wrong password'], 400)
     }
 
     const roomThere = await prisma.rooms.findUnique({
@@ -101,10 +98,7 @@ app.post('/api/create-room', async (req, res) => {
 
     if (roomThere) {
       if (roomThere.adminId !== admin.id) {
-        res.status(405).json({
-          message: 'Room already taken',
-        })
-        return
+        throw new CustomError(['Room already taken'], 405)
       }
     } else {
       await prisma.rooms.create({
@@ -124,40 +118,34 @@ app.post('/api/create-room', async (req, res) => {
       roomId,
       username,
     })
-  } catch (error) {
-    if (
-      error instanceof Prisma.PrismaClientKnownRequestError &&
-      error.code === 'P2025'
-    ) {
-      res.status(404).send('Admin not found')
-      return
-    } else {
-      res.status(501).json({
-        error,
-      })
-      return
+  } catch (err) {
+    if (err instanceof ZodError) {
+      // Extract the first Zod error message for simplicity
+      const errorDetails = err.errors.map(error => ({
+        field: error.path.join('.'),
+        message: error.message
+      }));
+      const errorMessage = errorDetails.map(detail => `${detail.field}: ${detail.message}`)
+      next(new CustomError(errorMessage, 400));
+    } else{
+      console.log(err)
+      next(err)
     }
   }
 })
 
-app.post('/api/join-room', async (req, res) => {
+app.post('/api/join-room', RateLimiter, async (req, res, next) => {
   const { roomId, username } = req.body
 
   try {
     const isInputValid = joinRoomSchema.parse({ roomId, username })
 
-    if (rooms.get(roomId)?.users.size === 2) {
-      res.status(405).json({
-        message: 'Room limit exceeded',
-      })
-      return
+    if (!isInputValid) {
+      throw new CustomError(['Invalid data'], 400)
     }
 
-    if (!isInputValid) {
-      res.status(400).json({
-        message: 'Please enter valid data',
-      })
-      return
+    if (rooms.get(roomId)?.users.size === 2) {
+      throw new CustomError(['Room limit exceeded'], 405)
     }
 
     const roomExist = await prisma.rooms.findUnique({
@@ -167,10 +155,7 @@ app.post('/api/join-room', async (req, res) => {
     })
 
     if (!roomExist) {
-      res.status(404).json({
-        message: 'Room not found',
-      })
-      return
+      throw new CustomError(['Room not found'], 404)
     }
 
     res.status(200).json({
@@ -180,12 +165,30 @@ app.post('/api/join-room', async (req, res) => {
         username,
       },
     })
-
-    return
   } catch (err) {
-    res.status(500).json({
-      message: 'Could not join room',
-    })
+    if (err instanceof ZodError) {
+      // Extract the first Zod error message for simplicity
+      const errorDetails = err.errors.map(error => ({
+        field: error.path.join('.'),
+        message: error.message
+      }));
+      const errorMessage = errorDetails.map(detail => `${detail.field}: ${detail.message}`);
+      next(new CustomError(errorMessage, 400));
+    } else{
+      console.log(err)
+      next(err)
+    }
+  }
+})
+
+app.use((err: CustomError, req: Request, res: Response, next: NextFunction)  => {
+
+  if (err instanceof CustomError) {
+    res.statusMessage = err.messages || 'Internal server Errors';
+    res.status(err.statusCode).end();
+  } else {
+    res.statusMessage = 'Internal server Error';
+    res.status(500).end();
   }
 })
 
