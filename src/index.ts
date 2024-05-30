@@ -17,8 +17,6 @@ const RateLimiter = rateLimit({
   legacyHeaders: false, // Disable the `X-RateLimit-*` headers
 });
 
-//test
-
 const app = express()
 const httpServer = app.listen(8080)
 const io = new SocketIoServer(httpServer, {
