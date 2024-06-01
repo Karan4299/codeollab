@@ -41,22 +41,22 @@ jobs:
         docker save karan4299/codeollabbe:latest > codeollabbe_v3.tar
     
     - name: Push to GCP
-      run: |
-        echo 'Folder Data:' && \
-        ls && \
-        echo 'known hosts:' && \
-        cat ~/.ssh/id_rsa && \
-        scp -i ~/.ssh/id_rsa codeollabbe_v3.tar bairagikaran482@35.200.237.254:/
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.GCPHOST }}
+        username: ${{ secrets.GCPUSERNAME }}
+        key: ${{ secrets.GCP_PRIVATE }}
+        port: 22
+        source: "codeollabbe_v3.tar"
+        target: "/"
 
-    # ssh -i ~/.ssh/id_rsa bairagikaran482@35.200.237.254 "\
-    #   uses: appleboy/ssh-action@master
-    #   with:
-    #     host: ${{ secrets.GCPHOST }}
-    #     username: ${{ secrets.GCPUSERNAME }}
-    #     key: ${{ secrets.GCP_PRIVATE }}
-    #     port: 22
-    #     source: "codeollabbe_v3.tar"
-    #     target: "."
+
+    # run: |
+    # echo 'Folder Data:' && \
+    # ls && \
+    # echo 'known hosts:' && \
+    # cat ~/.ssh/id_rsa && \
+    # scp -i ~/.ssh/id_rsa codeollabbe_v3.tar bairagikaran482@35.200.237.254:/
 
     - name: Load and Run Docker Image on VM
       run: |
