@@ -38,7 +38,7 @@ jobs:
 
     - name: Compress docker Image
       run: |
-        docker save karan4299/codeollabbe:latest > codeollabbe_v2.tar
+        docker save karan4299/codeollabbe:latest > codeollabbe_v3.tar
     
     - name: Push to GCP
       uses: appleboy/ssh-action@master
@@ -47,7 +47,7 @@ jobs:
         username: ${{ secrets.GCPUSERNAME }}
         key: ${{ secrets.GCP_PRIVATE }}
         port: 22
-        source: "codeollabbe_v2.tar"
+        source: "codeollabbe_v3.tar"
         target: "."
 
     - name: Load and Run Docker Image on VM
@@ -56,17 +56,17 @@ jobs:
         echo 'Listing Docker images:' && \
         docker image list && \
         echo 'Stopping and removing containers:' && \
-        docker ps -aq --filter ancestor=codeollab_v2 | xargs -r docker stop && \
-        docker ps -aq --filter ancestor=codeollab_v2 | xargs -r docker rm && \
+        docker ps -aq --filter ancestor=codeollab_v3 | xargs -r docker stop && \
+        docker ps -aq --filter ancestor=codeollab_v3 | xargs -r docker rm && \
         echo 'Removing old image if exists:' && \
-        docker rmi codeollab_v2 || true && \
+        docker rmi codeollab_v3 || true && \
         echo 'Listing Docker images:' && \
         docker image list && \
         echo 'Listing folders in VM:' && \
         ls && \
         echo 'Loading new image from tar file:' && \
-        docker load < codeollabbe_v2.tar && \
+        docker load < codeollabbe_v3.tar && \
         echo 'Listing Docker images:' && \
         docker image list && \
         echo 'Running new container:' && \
-        docker run -d -p 8080:8080 --name myapp codeollab_v2"
+        docker run -d -p 8080:8080 codeollab_v3"

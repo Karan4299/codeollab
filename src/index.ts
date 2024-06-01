@@ -181,6 +181,10 @@ app.post('/api/join-room', RateLimiter, async (req, res, next) => {
   }
 })
 
+app.get('/', (req, res) => {
+  res.send("Welcome to codeollab")
+})
+
 app.use((err: CustomError, req: Request, res: Response, next: NextFunction)  => {
 
   if (err instanceof CustomError) {
