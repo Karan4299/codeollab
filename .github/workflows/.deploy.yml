@@ -46,7 +46,7 @@ jobs:
         ls && \
         echo 'known hosts:' && \
         ls ~/.ssh && \
-        scp -i ~/.ssh/id_rsa codeollabbe_v3.tar bairagikaran482@35.200.237.254:/test
+        scp -i ~/.ssh/id_rsa codeollabbe_v3.tar bairagikaran482@35.200.237.254:~
     #   uses: appleboy/ssh-action@master
     #   with:
     #     host: ${{ secrets.GCPHOST }}
