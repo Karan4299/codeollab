@@ -12,6 +12,13 @@ jobs:
     - name: Check Out Repo
       uses: actions/checkout@v2
 
+    - name: Setup SSH FOR GCP
+      run: |
+        mkdir -p ~/.ssh
+        echo "${{ secrets.GCP_PRIVATE }}" > ~/.ssh/id_rsa
+        chmod 600 ~/.ssh/id_rsa
+        ssh-keyscan -H ${{ secrets.GCPHOST }} > ~/.ssh/known_hosts
+
     - name: Log in to Docker Hub
       uses: docker/login-action@v1
       with:
@@ -24,7 +31,30 @@ jobs:
         context: .
         file: ./Dockerfile
         push: true
-        tags: karan4299/codeollabbe:latest  # Replace with your Docker Hub username and repository
+        tags: karan4299/codeollabbe:latest 
 
     - name: Verify Pushed Image
-      run: docker pull karan4299/codeollabbe:latest  # Replace with your Docker Hub username and repository
+      run: docker pull karan4299/codeollabbe:latest 
+
+    - name: Compress docker Image
+      run: |
+        docker save karan4299/codeollabbe:latest > codeollabbe_v2.tar
+    
+    - name: Push to GCP
+      uses: appleboy/ssh-action@master
+      with:
+        host: ${{ secrets.GCPHOST }}
+        username: ${{ secrets.GCPUSERNAME }}
+        key: ${{ secrets.GCP_PRIVATE }}
+        port: 22
+        source: "codeollabbe_v2.tar"
+        target: "."
+
+    - name: Load and Run Docker Image on VM
+      run: |
+          ssh -i ~/.ssh/id_rsa bairagikaran482@35.200.237.254 "\
+          docker ps -aq --filter ancestor=codeollab_v2 | xargs -r docker stop && \
+          docker ps -aq --filter ancestor=codeollab_v2 | xargs -r docker rm && \
+          docker rmi codeollabbe_v2 || true && \
+          docker load < codeollabbe_v2.tar && \
+          docker run -d -p 80:8080 codeollabbe_v2:latest
