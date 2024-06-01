@@ -53,6 +53,7 @@ jobs:
     - name: Load and Run Docker Image on VM
       run: |
           ssh -i ~/.ssh/id_rsa bairagikaran482@35.200.237.254 "\
+          echo docker image list
           docker ps -aq --filter ancestor=codeollab_v2 | xargs -r docker stop && \
           docker ps -aq --filter ancestor=codeollab_v2 | xargs -r docker rm && \
           docker rmi codeollabbe_v2 || true && \
