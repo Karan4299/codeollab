@@ -46,7 +46,7 @@ jobs:
         ls && \
         echo 'known hosts:' && \
         cat ~/.ssh/id_rsa && \
-        scp codeollabbe_v3.tar bairagikaran482@35.200.237.254:/
+        scp -i ~/.ssh/id_rsa codeollabbe_v3.tar bairagikaran482@35.200.237.254:/
 
     # ssh -i ~/.ssh/id_rsa bairagikaran482@35.200.237.254 "\
     #   uses: appleboy/ssh-action@master
