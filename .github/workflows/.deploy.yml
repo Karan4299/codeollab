@@ -57,4 +57,4 @@ jobs:
           docker ps -aq --filter ancestor=codeollab_v2 | xargs -r docker rm && \
           docker rmi codeollabbe_v2 || true && \
           docker load < codeollabbe_v2.tar && \
-          docker run -d -p 80:8080 codeollabbe_v2:latest"
+          docker run -d -p 80:8080 codeollabbe_v2"
