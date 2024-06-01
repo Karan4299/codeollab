@@ -47,22 +47,6 @@ jobs:
         echo 'known hosts:' && \
         ls ~/.ssh && \
         scp -i ~/.ssh/id_rsa codeollabbe_v3.tar bairagikaran482@35.200.237.254:~
-    #   uses: appleboy/ssh-action@master
-    #   with:
-    #     host: ${{ secrets.GCPHOST }}
-    #     username: ${{ secrets.GCPUSERNAME }}
-    #     key: ${{ secrets.GCP_PRIVATE }}
-    #     port: 22
-    #     source: "codeollabbe_v3.tar"
-    #     target: "/test"
-
-
-    # run: |
-    # echo 'Folder Data:' && \
-    # ls && \
-    # echo 'known hosts:' && \
-    # cat ~/.ssh/id_rsa && \
-    # scp -i ~/.ssh/id_rsa codeollabbe_v3.tar bairagikaran482@35.200.237.254:/
 
     - name: Load and Run Docker Image on VM
       run: |
@@ -70,10 +54,10 @@ jobs:
         echo 'Listing Docker images:' && \
         docker image list && \
         echo 'Stopping and removing containers:' && \
-        docker ps -aq --filter ancestor=codeollab_v3 | xargs -r docker stop && \
-        docker ps -aq --filter ancestor=codeollab_v3 | xargs -r docker rm && \
+        docker ps -aq --filter ancestor=karan4299/codeollabbe:latest | xargs -r docker stop && \
+        docker ps -aq --filter ancestor=karan4299/codeollabbe:latest | xargs -r docker rm && \
         echo 'Removing old image if exists:' && \
-        docker rmi codeollab_v3 || true && \
+        docker rmi karan4299/codeollabbe:latest || true && \
         echo 'Listing Docker images:' && \
         docker image list && \
         echo 'Listing folders in VM:' && \
@@ -83,4 +67,4 @@ jobs:
         echo 'Listing Docker images:' && \
         docker image list && \
         echo 'Running new container:' && \
-        docker run -d -p 8080:8080 codeollab_v3"
+        docker run -d -p 8080:8080 karan4299/codeollabbe:latest"
