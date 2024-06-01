@@ -56,11 +56,17 @@ jobs:
         echo 'Listing Docker images:' && \
         docker image list && \
         echo 'Stopping and removing containers:' && \
-        docker ps -aq --filter ancestor=codeollabbe_v2 | xargs -r docker stop && \
-        docker ps -aq --filter ancestor=codeollabbe_v2 | xargs -r docker rm && \
+        docker ps -aq --filter ancestor=codeollab_v2 | xargs -r docker stop && \
+        docker ps -aq --filter ancestor=codeollab_v2 | xargs -r docker rm && \
         echo 'Removing old image if exists:' && \
-        docker rmi codeollabbe_v2 || true && \
+        docker rmi codeollab_v2 || true && \
+        echo 'Listing Docker images:' && \
+        docker image list && \
+        echo 'Listing folders in VM:' && \
+        ls && \
         echo 'Loading new image from tar file:' && \
         docker load < codeollabbe_v2.tar && \
+        echo 'Listing Docker images:' && \
+        docker image list && \
         echo 'Running new container:' && \
         docker run -d -p 80:8080 --name myapp codeollabbe_v2"
