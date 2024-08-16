@@ -1,7 +1,7 @@
 name: Build on PR
 
 on:
-  pull_request:
+  push:
     branches:
       - main
 
@@ -9,14 +9,29 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - name: Use Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: '20'
-      
-      - name: Install Dependencies
-        run: npm install
-        
-      - name: Run Build
-        run: npm run build
+      - name: Setup ssh for Server
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.GCP_PRIVATE }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.GCPHOST }} > ~/.ssh/known_hosts
+
+      - name: SSH into server and Install Docker
+        run: |
+          ssh -i ~/.ssh/id_rsa bairagikaran482@35.200.237.254 && \
+          if ! command -c docker &> /dev/null
+          then
+            echo "Docker not found." && \
+            echo "Installing...." && \
+            sudo apt-get update && \
+            sudo apt-get install -y apt-transport-https ca-certificates curl software-properties-common && \
+            curl -fsSL https://download.docker.com/linux/ubuntu/gpg | sudo apt-key add - && \
+            sudo add-apt-repository 'deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable' && \
+            sudo apt-get update && \
+            sudo apt-get install -y docker-ce && \
+            if command -v docker &> /dev/null
+            then
+              echo "Docker is installed."
+            else
+              echo "Docker is not installed."
+            fi

@@ -1,70 +1,71 @@
 name: Build and Deploy to Docker Hub
 
 on:
-  push:
-    branches:
-      - main
+  workflow_run:
+    workflows: ['build.yaml']
+    types:
+      - completed
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
     steps:
-    - name: Check Out Repo
-      uses: actions/checkout@v2
+      - name: Check Out Repo
+        uses: actions/checkout@v2
 
-    - name: Setup SSH FOR GCP
-      run: |
-        mkdir -p ~/.ssh
-        echo "${{ secrets.GCP_PRIVATE }}" > ~/.ssh/id_rsa
-        chmod 600 ~/.ssh/id_rsa
-        ssh-keyscan -H ${{ secrets.GCPHOST }} > ~/.ssh/known_hosts
+      - name: Setup SSH FOR GCP
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.GCP_PRIVATE }}" > ~/.ssh/id_rsa
+          chmod 600 ~/.ssh/id_rsa
+          ssh-keyscan -H ${{ secrets.GCPHOST }} > ~/.ssh/known_hosts
 
-    - name: Log in to Docker Hub
-      uses: docker/login-action@v1
-      with:
-        username: ${{ secrets.DOCKERCODEOLLAB_USERNAME }}
-        password: ${{ secrets.DOCKERCODEOLLAB_PASSWORD }}
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERCODEOLLAB_USERNAME }}
+          password: ${{ secrets.DOCKERCODEOLLAB_PASSWORD }}
 
-    - name: Build and Push Docker image
-      uses: docker/build-push-action@v2
-      with:
-        context: .
-        file: ./Dockerfile
-        push: true
-        tags: karan4299/codeollabbe:latest 
+      - name: Build and Push Docker image
+        uses: docker/build-push-action@v2
+        with:
+          context: .
+          file: ./Dockerfile
+          push: true
+          tags: karan4299/codeollabbe:latest
 
-    - name: Verify Pushed Image
-      run: docker pull karan4299/codeollabbe:latest 
+      - name: Verify Pushed Image
+        run: docker pull karan4299/codeollabbe:latest
 
-    - name: Compress docker Image
-      run: |
-        docker save karan4299/codeollabbe:latest > codeollabbe_v3.tar
-    
-    - name: Push to GCP
-      run: |
-        echo 'Folder Data:' && \
-        ls && \
-        echo 'known hosts:' && \
-        ls ~/.ssh && \
-        scp -i ~/.ssh/id_rsa codeollabbe_v3.tar bairagikaran482@35.200.237.254:~
+      - name: Compress docker Image
+        run: |
+          docker save karan4299/codeollabbe:latest > codeollabbe_v3.tar
 
-    - name: Load and Run Docker Image on VM
-      run: |
-        ssh -i ~/.ssh/id_rsa bairagikaran482@35.200.237.254 "\
-        echo 'Listing Docker images:' && \
-        docker image list && \
-        echo 'Stopping and removing containers:' && \
-        docker ps -aq --filter ancestor=karan4299/codeollabbe:latest | xargs -r docker stop && \
-        docker ps -aq --filter ancestor=karan4299/codeollabbe:latest | xargs -r docker rm && \
-        echo 'Removing old image if exists:' && \
-        docker rmi karan4299/codeollabbe:latest || true && \
-        echo 'Listing Docker images:' && \
-        docker image list && \
-        echo 'Listing folders in VM:' && \
-        ls && \
-        echo 'Loading new image from tar file:' && \
-        docker load < codeollabbe_v3.tar && \
-        echo 'Listing Docker images:' && \
-        docker image list && \
-        echo 'Running new container:' && \
-        docker run -d -p 8080:8080 karan4299/codeollabbe:latest"
+      - name: Push to GCP
+        run: |
+          echo 'Folder Data:' && \
+          ls && \
+          echo 'known hosts:' && \
+          ls ~/.ssh && \
+          scp -i ~/.ssh/id_rsa codeollabbe_v3.tar bairagikaran482@35.200.237.254:~
+
+      - name: Load and Run Docker Image on VM
+        run: |
+          ssh -i ~/.ssh/id_rsa bairagikaran482@35.200.237.254 && \
+          echo 'Listing Docker images:' && \
+          docker image list && \
+          echo 'Stopping and removing containers:' && \
+          docker ps -aq --filter ancestor=karan4299/codeollabbe:latest | xargs -r docker stop && \
+          docker ps -aq --filter ancestor=karan4299/codeollabbe:latest | xargs -r docker rm && \
+          echo 'Removing old image if exists:' && \
+          docker rmi karan4299/codeollabbe:latest || true && \
+          echo 'Listing Docker images:' && \
+          docker image list && \
+          echo 'Listing folders in VM:' && \
+          ls && \
+          echo 'Loading new image from tar file:' && \
+          docker load < codeollabbe_v3.tar && \
+          echo 'Listing Docker images:' && \
+          docker image list && \
+          echo 'Running new container:' && \
+          docker run -d -p 8080:8080 karan4299/codeollabbe:latest"
