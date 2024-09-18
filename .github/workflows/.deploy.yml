@@ -1,10 +1,9 @@
 name: Build and Deploy to Docker Hub
 
 on:
-  workflow_run:
-    workflows: ['build.yaml']
-    types:
-      - completed
+  push:
+    branches:
+      - main
 
 jobs:
   build-and-push:
@@ -47,11 +46,11 @@ jobs:
           ls && \
           echo 'known hosts:' && \
           ls ~/.ssh && \
-          scp -i ~/.ssh/id_rsa codeollabbe_v3.tar bairagikaran482@35.200.237.254:~
+          scp -i ~/.ssh/id_rsa codeollabbe_v3.tar bairagikaran482@34.93.85.255:~
 
       - name: Load and Run Docker Image on VM
         run: |
-          ssh -i ~/.ssh/id_rsa bairagikaran482@35.200.237.254 && \
+          ssh -i ~/.ssh/id_rsa bairagikaran482@34.93.85.255 "\
           echo 'Listing Docker images:' && \
           docker image list && \
           echo 'Stopping and removing containers:' && \
